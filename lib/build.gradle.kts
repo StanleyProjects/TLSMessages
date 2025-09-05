@@ -52,6 +52,8 @@ tasks.getByName<KotlinCompile>("compileTestKotlin") {
 }
 
 dependencies {
+    implementation("com.github.kepocnhh:Bytes:0.4.0")
+    implementation("com.github.kepocnhh:Secrets:0.1.0")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${Version.jupiter}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${Version.jupiter}")
 }
