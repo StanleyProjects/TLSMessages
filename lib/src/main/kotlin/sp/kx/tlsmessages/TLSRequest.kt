@@ -1,13 +1,7 @@
 package sp.kx.tlsmessages
 
-import java.util.UUID
-import javax.crypto.SecretKey
-
-class TLSRequest internal constructor(
-    val method: Byte,
-    val query: ByteArray,
-    val key: SecretKey,
-    val id: UUID,
+class TLSRequest(
+    val issuer: TLSIssuer,
     val body: ByteArray,
 ) {
     companion object {
