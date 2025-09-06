@@ -44,12 +44,9 @@ class RealTLSMessages : TLSMessages {
         )
         val encrypted = symmetric.enc.encrypt(issuer.key, payload, iv = iv)
         val signee = toSignee(
-            id = issuer.id,
+            issuer = issuer,
             time = time,
             body = body,
-            method = issuer.method,
-            query = issuer.query,
-            key = issuer.key,
         )
         val signature = asymmetric.signing.sign(keyPair.private, signee)
         val bytes = ByteArrayOutputStream().use {
@@ -93,12 +90,9 @@ class RealTLSMessages : TLSMessages {
                 id = id,
             )
             val signee = toSignee(
-                id = issuer.id,
+                issuer = issuer,
                 time = time,
                 body = body,
-                method = issuer.method,
-                query = issuer.query,
-                key = issuer.key,
             )
             val signature = it.readBytes(it.readInt())
             val verified = asymmetric.signing.verify(keyPair.public, signee, signature = signature)
@@ -112,6 +106,7 @@ class RealTLSMessages : TLSMessages {
     }
 
     private fun toResponseBody(
+        keyPair: KeyPair,
         code: Int,
         message: String,
         body: ByteArray?,
@@ -124,11 +119,28 @@ class RealTLSMessages : TLSMessages {
                 it.writeBytes(value = body.size)
                 it.writeBytes(body)
             }
-            val time = System.currentTimeMillis().milliseconds // todo
-            it.writeBytes(value = time.inWholeMilliseconds)
+            it.writeBytes(value = System.currentTimeMillis()) // todo
             it.toByteArray()
         }
-        TODO("RealTLSMessages:toResponseBody")
+        val random: SecureRandom = SecureRandom.getInstanceStrong() // todo
+        val iv = ByteArray(16)
+        random.nextBytes(iv)
+        val encrypted = symmetric.enc.encrypt(issuer.key, payload, iv = iv)
+        val signee = toSignee(
+            issuer = issuer,
+            code = code,
+            message = message,
+            payload = payload,
+        )
+        val signature = asymmetric.signing.sign(keyPair.private, signee)
+        return ByteArrayOutputStream().use {
+            it.writeBytes(value = encrypted.size)
+            it.writeBytes(encrypted)
+            it.writeBytes(iv)
+            it.writeBytes(value = signature.size)
+            it.writeBytes(signature)
+            it.toByteArray()
+        }
     }
 
     companion object {
@@ -161,20 +173,35 @@ class RealTLSMessages : TLSMessages {
         }
 
         private fun toSignee(
-            id: UUID,
+            issuer: TLSIssuer,
             time: Duration,
             body: ByteArray,
-            method: Int,
-            query: ByteArray,
-            key: SecretKey,
         ): ByteArray {
             return ByteArrayOutputStream().use {
-                it.writeBytes(value = id)
-                it.writeBytes(value = time.inWholeMilliseconds)
+                it.writeBytes(value = issuer.id)
+                it.write(issuer.method)
+                it.writeBytes(issuer.query)
+                it.writeBytes(issuer.key.encoded)
                 it.writeBytes(body)
-                it.write(method)
-                it.writeBytes(query)
-                it.writeBytes(key.encoded)
+                it.writeBytes(value = time.inWholeMilliseconds)
+                it.toByteArray()
+            }
+        }
+
+        private fun toSignee(
+            issuer: TLSIssuer,
+            payload: ByteArray,
+            code: Int,
+            message: String,
+        ): ByteArray {
+            return ByteArrayOutputStream().use {
+                it.writeBytes(value = issuer.id)
+                it.write(issuer.method)
+                it.writeBytes(issuer.query)
+                it.writeBytes(issuer.key.encoded)
+                it.writeBytes(payload)
+                it.writeBytes(value = code)
+                it.writeBytes(message.toByteArray())
                 it.toByteArray()
             }
         }
