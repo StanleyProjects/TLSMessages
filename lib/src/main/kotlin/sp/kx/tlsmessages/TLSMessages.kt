@@ -8,7 +8,7 @@ interface TLSMessages {
         method: String,
         query: String,
         body: ByteArray,
-    ): TLSRequest
+    ): TLSRequest.Encoded
 
     fun fromRequest(
         keyPair: KeyPair,

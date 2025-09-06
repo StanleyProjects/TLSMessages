@@ -19,14 +19,13 @@ import kotlin.time.Duration.Companion.milliseconds
 class RealTLSMessages : TLSMessages {
     private val symmetric: Symmetric = Symmetric.AES
     private val asymmetric: Asymmetric = Asymmetric.RSA
-    private val timeMax: Long = 1_000 * 60
 
     override fun toRequest(
         keyPair: KeyPair,
         method: String,
         query: String,
         body: ByteArray,
-    ): TLSRequest {
+    ): TLSRequest.Encoded {
         val issuer = toIssuer(
             method = method,
             query = query,
@@ -69,85 +68,6 @@ class RealTLSMessages : TLSMessages {
         )
     }
 
-    private fun toIssuer(
-        method: String,
-        query: String,
-        key: SecretKey,
-        id: UUID,
-    ): TLSIssuer {
-        return TLSIssuer(
-            method = TLSRequest.getMethodCode(method = method),
-            query = query.toByteArray(),
-            key = key,
-            id = id,
-        )
-    }
-
-    private fun toBytes(
-        id: UUID,
-        time: Duration,
-        body: ByteArray,
-    ): ByteArray {
-        return ByteArrayOutputStream().use {
-            it.writeBytes(value = id)
-            it.writeBytes(value = time.inWholeMilliseconds)
-            it.writeBytes(value = body.size)
-            it.writeBytes(body)
-            it.toByteArray()
-        }
-    }
-
-    private fun toBytes(payload: TLSPayload): ByteArray {
-        return ByteArrayOutputStream().use {
-            it.writeBytes(value = payload.id)
-            it.writeBytes(value = payload.time.inWholeMilliseconds)
-            it.writeBytes(value = payload.body.size)
-            it.writeBytes(payload.body)
-            it.toByteArray()
-        }
-    }
-
-    private fun toPayload(encoded: ByteArray): TLSPayload {
-        return ByteArrayInputStream(encoded).use {
-            TLSPayload(
-                id = it.readUUID(),
-                time = it.readLong().milliseconds,
-                body = it.readBytes(it.readInt()),
-            )
-        }
-    }
-
-    private fun toSignee(
-        id: UUID,
-        time: Duration,
-        body: ByteArray,
-        method: Int,
-        query: ByteArray,
-        key: SecretKey,
-    ): ByteArray {
-        return ByteArrayOutputStream().use {
-            it.writeBytes(value = id)
-            it.writeBytes(value = time.inWholeMilliseconds)
-            it.writeBytes(body)
-            it.write(method)
-            it.writeBytes(query)
-            it.writeBytes(key.encoded)
-            it.toByteArray()
-        }
-    }
-
-    private fun toSignee(payload: TLSPayload, issuer: TLSIssuer): ByteArray {
-        return ByteArrayOutputStream().use {
-            it.writeBytes(value = payload.id)
-            it.writeBytes(value = payload.time.inWholeMilliseconds)
-            it.writeBytes(payload.body)
-            it.write(issuer.method.toInt())
-            it.writeBytes(issuer.query)
-            it.writeBytes(issuer.key.encoded)
-            it.toByteArray()
-        }
-    }
-
     override fun fromRequest(
         keyPair: KeyPair,
         method: String,
@@ -188,6 +108,75 @@ class RealTLSMessages : TLSMessages {
                 time = time,
                 body = body,
             )
+        }
+    }
+
+    private fun toResponseBody(
+        code: Int,
+        message: String,
+        body: ByteArray?,
+        issuer: TLSIssuer,
+    ): ByteArray {
+        val payload = ByteArrayOutputStream().use {
+            if (body == null || body.isEmpty()) {
+                it.writeBytes(value = 0)
+            } else {
+                it.writeBytes(value = body.size)
+                it.writeBytes(body)
+            }
+            val time = System.currentTimeMillis().milliseconds // todo
+            it.writeBytes(value = time.inWholeMilliseconds)
+            it.toByteArray()
+        }
+        TODO("RealTLSMessages:toResponseBody")
+    }
+
+    companion object {
+        private fun toIssuer(
+            method: String,
+            query: String,
+            key: SecretKey,
+            id: UUID,
+        ): TLSIssuer {
+            return TLSIssuer(
+                method = TLSRequest.getMethodCode(method = method),
+                query = query.toByteArray(),
+                key = key,
+                id = id,
+            )
+        }
+
+        private fun toBytes(
+            id: UUID,
+            time: Duration,
+            body: ByteArray,
+        ): ByteArray {
+            return ByteArrayOutputStream().use {
+                it.writeBytes(value = id)
+                it.writeBytes(value = time.inWholeMilliseconds)
+                it.writeBytes(value = body.size)
+                it.writeBytes(body)
+                it.toByteArray()
+            }
+        }
+
+        private fun toSignee(
+            id: UUID,
+            time: Duration,
+            body: ByteArray,
+            method: Int,
+            query: ByteArray,
+            key: SecretKey,
+        ): ByteArray {
+            return ByteArrayOutputStream().use {
+                it.writeBytes(value = id)
+                it.writeBytes(value = time.inWholeMilliseconds)
+                it.writeBytes(body)
+                it.write(method)
+                it.writeBytes(query)
+                it.writeBytes(key.encoded)
+                it.toByteArray()
+            }
         }
     }
 }
