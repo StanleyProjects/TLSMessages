@@ -6,5 +6,5 @@ import kotlin.time.Duration
 class TLSPayload(
     val id: UUID,
     val time: Duration,
-    val bytes: ByteArray,
+    val body: ByteArray,
 )

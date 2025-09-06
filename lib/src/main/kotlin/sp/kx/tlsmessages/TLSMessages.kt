@@ -7,11 +7,13 @@ interface TLSMessages {
         keyPair: KeyPair,
         method: String,
         query: String,
-        bytes: ByteArray,
+        body: ByteArray,
     ): TLSRequest
 
-    fun fromResponse(
-        issuer: TLSIssuer,
-        body: ByteArray,
-    ): ByteArray
+    fun fromRequest(
+        keyPair: KeyPair,
+        method: String,
+        query: String,
+        bytes: ByteArray,
+    ): TLSRequest.Decoded
 }
