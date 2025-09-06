@@ -21,48 +21,11 @@ class RealTLSMessages : TLSMessages {
     private val symmetric: Symmetric = Symmetric.AES
     private val asymmetric: Asymmetric = Asymmetric.RSA
 
-    override fun toRequest(
-        keyPair: KeyPair,
-        method: String,
-        query: String,
-        body: ByteArray,
-    ): TLSRequest.Encoded {
-        val issuer = toIssuer(
-            method = method,
-            query = query,
-            key = symmetric.factory.newSecretKey(),
-            id = UUID.randomUUID(), // todo
-        )
-        val encryptedKey = asymmetric.enc.encrypt(keyPair.public, issuer.key.encoded)
-        val random: SecureRandom = SecureRandom.getInstanceStrong() // todo
-        val iv = ByteArray(16)
-        random.nextBytes(iv)
-        val time = System.currentTimeMillis().milliseconds // todo
-        val payload = toBytes(
-            id = issuer.id,
-            time = time,
-            body = body,
-        )
-        val encrypted = symmetric.enc.encrypt(issuer.key, payload, iv = iv)
-        val signee = toSignee(
-            issuer = issuer,
-            time = time,
-            body = body,
-        )
-        val signature = asymmetric.signing.sign(keyPair.private, signee)
-        val bytes = ByteArrayOutputStream().use {
-            it.writeBytes(value = encryptedKey.size)
-            it.writeBytes(encryptedKey)
-            it.writeBytes(value = encrypted.size)
-            it.writeBytes(encrypted)
-            it.writeBytes(iv)
-            it.writeBytes(value = signature.size)
-            it.writeBytes(signature)
-            it.toByteArray()
-        }
-        return TLSRequest.Encoded(
-            issuer = issuer,
-            bytes = bytes,
+    override fun transmitter(keyPair: KeyPair): TLSTransmitter {
+        return RealTLSTransmitter(
+            keyPair = keyPair,
+            symmetric = symmetric,
+            asymmetric = asymmetric,
         )
     }
 
@@ -144,67 +107,7 @@ class RealTLSMessages : TLSMessages {
         }
     }
 
-    override fun fromResponseBody(
-        keyPair: KeyPair,
-        code: Int,
-        message: String,
-        issuer: TLSIssuer,
-        bytes: ByteArray,
-    ): ByteArray {
-        val payload = ByteArrayInputStream(bytes).use {
-            val encrypted = it.readBytes(it.readInt())
-            val iv = it.readBytes(16)
-            val payload = symmetric.enc.decrypt(issuer.key, encrypted, iv = iv)
-            val signature = it.readBytes(it.readInt())
-            val signee = toSignee(
-                issuer = issuer,
-                code = code,
-                message = message,
-                payload = payload,
-            )
-            val verified = asymmetric.signing.verify(keyPair.public, signee, signature = signature)
-            if (!verified) error("Not verified!")
-            payload
-        }
-        return ByteArrayInputStream(payload).use {
-            val time = it.readLong().milliseconds
-            val timeNow = System.currentTimeMillis().milliseconds // todo
-            val timeMax = 1.minutes // todo
-//            if (timeNow < time) error("Time error!") // todo IEEE 1588 Precision Time Protocol
-            if (timeNow - time > timeMax) error("Time is up!")
-            it.readBytes(it.readInt())
-        }
-    }
-
     companion object {
-        private fun toIssuer(
-            method: String,
-            query: String,
-            key: SecretKey,
-            id: UUID,
-        ): TLSIssuer {
-            return TLSIssuer(
-                method = TLSRequest.getMethodCode(method = method),
-                query = query.toByteArray(),
-                key = key,
-                id = id,
-            )
-        }
-
-        private fun toBytes(
-            id: UUID,
-            time: Duration,
-            body: ByteArray,
-        ): ByteArray {
-            return ByteArrayOutputStream().use {
-                it.writeBytes(value = id)
-                it.writeBytes(value = time.inWholeMilliseconds)
-                it.writeBytes(value = body.size)
-                it.writeBytes(body)
-                it.toByteArray()
-            }
-        }
-
         private fun toSignee(
             issuer: TLSIssuer,
             time: Duration,
