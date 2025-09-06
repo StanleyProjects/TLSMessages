@@ -15,6 +15,7 @@ import java.util.UUID
 import javax.crypto.SecretKey
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 class RealTLSMessages : TLSMessages {
     private val symmetric: Symmetric = Symmetric.AES
@@ -105,7 +106,7 @@ class RealTLSMessages : TLSMessages {
         }
     }
 
-    private fun toResponseBody(
+    override fun toResponseBody(
         keyPair: KeyPair,
         code: Int,
         message: String,
@@ -113,13 +114,13 @@ class RealTLSMessages : TLSMessages {
         issuer: TLSIssuer,
     ): ByteArray {
         val payload = ByteArrayOutputStream().use {
+            it.writeBytes(value = System.currentTimeMillis()) // todo
             if (body == null || body.isEmpty()) {
                 it.writeBytes(value = 0)
             } else {
                 it.writeBytes(value = body.size)
                 it.writeBytes(body)
             }
-            it.writeBytes(value = System.currentTimeMillis()) // todo
             it.toByteArray()
         }
         val random: SecureRandom = SecureRandom.getInstanceStrong() // todo
@@ -140,6 +141,38 @@ class RealTLSMessages : TLSMessages {
             it.writeBytes(value = signature.size)
             it.writeBytes(signature)
             it.toByteArray()
+        }
+    }
+
+    override fun fromResponseBody(
+        keyPair: KeyPair,
+        code: Int,
+        message: String,
+        issuer: TLSIssuer,
+        bytes: ByteArray,
+    ): ByteArray {
+        val payload = ByteArrayInputStream(bytes).use {
+            val encrypted = it.readBytes(it.readInt())
+            val iv = it.readBytes(16)
+            val payload = symmetric.enc.decrypt(issuer.key, encrypted, iv = iv)
+            val signature = it.readBytes(it.readInt())
+            val signee = toSignee(
+                issuer = issuer,
+                code = code,
+                message = message,
+                payload = payload,
+            )
+            val verified = asymmetric.signing.verify(keyPair.public, signee, signature = signature)
+            if (!verified) error("Not verified!")
+            payload
+        }
+        return ByteArrayInputStream(payload).use {
+            val time = it.readLong().milliseconds
+            val timeNow = System.currentTimeMillis().milliseconds // todo
+            val timeMax = 1.minutes // todo
+//            if (timeNow < time) error("Time error!") // todo IEEE 1588 Precision Time Protocol
+            if (timeNow - time > timeMax) error("Time is up!")
+            it.readBytes(it.readInt())
         }
     }
 
