@@ -23,13 +23,15 @@ class RealTLSReceiver(
         query: String,
         bytes: ByteArray
     ): TLSRequest.Decoded {
-        val (key, payload) = ByteArrayInputStream(bytes).use {
+        val (key, payload, signature) = ByteArrayInputStream(bytes).use {
             val encryptedKey = it.readBytes(it.readInt())
             val encodedKey = asymmetric.enc.decrypt(keyPair.private, encryptedKey)
             val key = symmetric.factory.toSecretKey(encodedKey)
             val encrypted = it.readBytes(it.readInt())
             val iv = it.readBytes(16)
-            key to symmetric.enc.decrypt(key, encrypted, iv = iv)
+            val signature = it.readBytes(it.readInt())
+            val payload = symmetric.enc.decrypt(key, encrypted, iv = iv)
+            Triple(key, payload, signature)
         }
         return ByteArrayInputStream(payload).use {
             val id = it.readUUID()
@@ -46,7 +48,6 @@ class RealTLSReceiver(
                 time = time,
                 body = body,
             )
-            val signature = it.readBytes(it.readInt())
             val verified = asymmetric.signing.verify(keyPair.public, signee, signature = signature)
             if (!verified) error("Not verified!")
             TLSRequest.Decoded(
