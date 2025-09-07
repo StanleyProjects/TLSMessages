@@ -17,10 +17,10 @@ class TLSIssuer(
     override fun equals(other: Any?): Boolean {
         return when (other) {
             is TLSIssuer -> {
-                id == other.id
-                    && method == other.method
-                    && query.contentEquals(other.query)
-                    && key.encoded.contentEquals(other.key.encoded)
+                id == other.id &&
+                    method == other.method &&
+                    query.contentEquals(other.query) &&
+                    key.encoded.contentEquals(other.key.encoded)
             }
             else -> false
         }

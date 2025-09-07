@@ -21,7 +21,7 @@ class RealTLSReceiver(
     override fun fromRequest(
         method: String,
         query: String,
-        bytes: ByteArray
+        bytes: ByteArray,
     ): TLSRequest.Decoded {
         val (key, payload, signature) = ByteArrayInputStream(bytes).use {
             val encryptedKey = it.readBytes(it.readInt())
@@ -62,7 +62,7 @@ class RealTLSReceiver(
         code: Int,
         message: String,
         body: ByteArray?,
-        issuer: TLSIssuer
+        issuer: TLSIssuer,
     ): ByteArray {
         val payload = ByteArrayOutputStream().use {
             it.writeBytes(value = System.currentTimeMillis()) // todo

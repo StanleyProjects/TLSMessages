@@ -3,7 +3,6 @@ package sp.kx.tlsmessages
 import sp.kx.bytes.readBytes
 import sp.kx.bytes.readInt
 import sp.kx.bytes.readLong
-import sp.kx.bytes.readUUID
 import sp.kx.bytes.writeBytes
 import sp.kx.secrets.Asymmetric
 import sp.kx.secrets.Symmetric
@@ -12,7 +11,6 @@ import java.io.ByteArrayOutputStream
 import java.security.KeyPair
 import java.security.SecureRandom
 import java.util.UUID
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
@@ -24,7 +22,7 @@ class RealTLSTransmitter(
     override fun toRequest(
         method: String,
         query: String,
-        body: ByteArray
+        body: ByteArray,
     ): TLSRequest.Encoded {
         val issuer = TLSIssuer.of(
             method = method,
