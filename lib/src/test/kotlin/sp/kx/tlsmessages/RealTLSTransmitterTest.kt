@@ -41,7 +41,7 @@ internal class RealTLSTransmitterTest {
         val encoded = transmitter.toRequest(
             method = method,
             query = query,
-            body = mockBytes(48),
+            body = "foo/body/request".toByteArray(),
         )
         val requested = mutableMapOf<UUID, Duration>()
         val receiver = RealTLSReceiver(
@@ -50,20 +50,26 @@ internal class RealTLSTransmitterTest {
             asymmetric = Asymmetric.RSA,
             requested = requested,
         )
-        check(requested.isEmpty())
         val decoded = receiver.fromRequest(
             method = method,
             query = query,
             bytes = encoded.bytes,
         )
-        TODO("RealTLSTransmitterTest:fromResponseBodyTest")
         val code = 42
         val message = "foo/message"
-        transmitter.fromResponseBody(
+        val expected = "${String(decoded.body)}/response".toByteArray()
+        val bytes = receiver.toResponseBody(
+            code = code,
+            message = message,
+            body = expected,
+            issuer = encoded.issuer,
+        )
+        val actual = transmitter.fromResponseBody(
             code = code,
             message = message,
             issuer = encoded.issuer,
-            bytes = decoded.body,
+            bytes = bytes,
         )
+        assertTrue(expected.contentEquals(actual))
     }
 }
