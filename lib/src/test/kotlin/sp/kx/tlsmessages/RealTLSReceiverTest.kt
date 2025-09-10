@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test
 import sp.kx.secrets.Asymmetric
 import sp.kx.secrets.Symmetric
 import java.security.KeyPairGenerator
+import java.util.UUID
+import kotlin.time.Duration
 
 internal class RealTLSReceiverTest {
     @Test
@@ -24,11 +26,14 @@ internal class RealTLSReceiverTest {
             query = query,
             body = body,
         )
+        val requested = mutableMapOf<UUID, Duration>()
         val receiver = RealTLSReceiver(
             keyPair = keyPair,
             symmetric = Symmetric.AES,
             asymmetric = Asymmetric.RSA,
+            requested = requested,
         )
+        check(requested.isEmpty())
         val decoded = receiver.fromRequest(
             method = method,
             query = query,
@@ -36,5 +41,8 @@ internal class RealTLSReceiverTest {
         )
         assertEquals(encoded.issuer, decoded.issuer)
         assertTrue(body.contentEquals(decoded.body))
+        val actual = requested.entries.single()
+        assertEquals(encoded.issuer.id, actual.key)
+        assertEquals(decoded.time, actual.value)
     }
 }
