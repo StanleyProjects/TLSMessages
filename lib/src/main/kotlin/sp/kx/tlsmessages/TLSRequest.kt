@@ -10,6 +10,7 @@ sealed interface TLSRequest {
 
     class Decoded(
         val issuer: TLSIssuer,
+        @Deprecated("useless")
         val time: Duration,
         val body: ByteArray,
     ) : TLSRequest
