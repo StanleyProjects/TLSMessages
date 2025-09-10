@@ -45,4 +45,44 @@ internal class RealTLSReceiverTest {
         assertEquals(encoded.issuer.id, actual.key)
         assertEquals(decoded.time, actual.value)
     }
+
+    @Test
+    fun toResponseBodyTest() {
+        val keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair()
+        val transmitter = RealTLSTransmitter(
+            keyPair = keyPair,
+            symmetric = Symmetric.AES,
+            asymmetric = Asymmetric.RSA,
+        )
+        val method = "POST"
+        val query = "foo/query"
+        val requestBody = "foo/body/request".toByteArray()
+        val encoded = transmitter.toRequest(
+            method = method,
+            query = query,
+            body = requestBody,
+        )
+        val requested = mutableMapOf<UUID, Duration>()
+        val receiver = RealTLSReceiver(
+            keyPair = keyPair,
+            symmetric = Symmetric.AES,
+            asymmetric = Asymmetric.RSA,
+            requested = requested,
+        )
+        val decoded = receiver.fromRequest(
+            method = method,
+            query = query,
+            bytes = encoded.bytes,
+        )
+        val code = 42
+        val message = "foo/message"
+        val responseBody = "${String(decoded.body)}/response".toByteArray()
+        val body = receiver.toResponseBody(
+            code = code,
+            message = message,
+            body = responseBody,
+            issuer = encoded.issuer,
+        )
+        assertTrue(body.isNotEmpty())
+    }
 }
