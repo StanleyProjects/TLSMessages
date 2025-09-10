@@ -32,7 +32,7 @@ class RealTLSTransmitter(
         )
         val encryptedKey = asymmetric.enc.encrypt(keyPair.public, issuer.key.encoded)
         val random: SecureRandom = SecureRandom.getInstanceStrong() // todo
-        val iv = ByteArray(16)
+        val iv = ByteArray(TLSBytes.ivSize)
         random.nextBytes(iv)
         val time = System.currentTimeMillis().milliseconds // todo
         val payload = TLSBytes.toPayload(
@@ -71,7 +71,7 @@ class RealTLSTransmitter(
     ): ByteArray {
         val payload = ByteArrayInputStream(bytes).use {
             val encrypted = it.readBytes(it.readInt())
-            val iv = it.readBytes(16)
+            val iv = it.readBytes(TLSBytes.ivSize)
             val payload = symmetric.enc.decrypt(issuer.key, encrypted, iv = iv)
             val signature = it.readBytes(it.readInt())
             val signee = TLSBytes.toSignee(

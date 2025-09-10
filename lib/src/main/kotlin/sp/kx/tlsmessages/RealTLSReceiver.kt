@@ -32,7 +32,7 @@ class RealTLSReceiver(
             val encodedKey = asymmetric.enc.decrypt(keyPair.private, encryptedKey)
             val key = symmetric.factory.toSecretKey(encodedKey)
             val encrypted = it.readBytes(it.readInt())
-            val iv = it.readBytes(16)
+            val iv = it.readBytes(TLSBytes.ivSize)
             val signature = it.readBytes(it.readInt())
             val payload = symmetric.enc.decrypt(key, encrypted, iv = iv)
             Triple(key, payload, signature)
@@ -90,7 +90,7 @@ class RealTLSReceiver(
             it.toByteArray()
         }
         val random: SecureRandom = SecureRandom.getInstanceStrong() // todo
-        val iv = ByteArray(16)
+        val iv = ByteArray(TLSBytes.ivSize)
         random.nextBytes(iv)
         val encrypted = symmetric.enc.encrypt(issuer.key, payload, iv = iv)
         val signee = TLSBytes.toSignee(
