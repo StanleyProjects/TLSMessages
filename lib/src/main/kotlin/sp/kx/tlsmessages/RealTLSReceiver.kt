@@ -11,12 +11,16 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.KeyPair
 import java.security.SecureRandom
+import java.util.UUID
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 class RealTLSReceiver(
     private val keyPair: KeyPair,
     private val symmetric: Symmetric,
     private val asymmetric: Asymmetric,
+    private val requested: MutableMap<UUID, Duration>,
 ) : TLSReceiver {
     override fun fromRequest(
         method: String,
@@ -26,16 +30,27 @@ class RealTLSReceiver(
         val (key, payload, signature) = ByteArrayInputStream(bytes).use {
             val encryptedKey = it.readBytes(it.readInt())
             val encodedKey = asymmetric.enc.decrypt(keyPair.private, encryptedKey)
-            val key = symmetric.factory.toSecretKey(encodedKey)
+            val key = symmetric.keys.toSecretKey(encodedKey)
             val encrypted = it.readBytes(it.readInt())
-            val iv = it.readBytes(16)
+            val iv = it.readBytes(TLSBytes.ivSize)
             val signature = it.readBytes(it.readInt())
             val payload = symmetric.enc.decrypt(key, encrypted, iv = iv)
             Triple(key, payload, signature)
         }
         return ByteArrayInputStream(payload).use {
             val id = it.readUUID()
+            if (requested.containsKey(id)) error("Request ID error!")
+            //
             val time = it.readLong().milliseconds
+            val timeNow = System.currentTimeMillis().milliseconds // todo
+//            if (timeNow < time) error("Time error!") // todo IEEE 1588 Precision Time Protocol
+            val timeMax = 1.minutes // todo
+            if (timeNow - time > timeMax) error("Time is up!")
+            for ((k, v) in requested.entries) {
+                if (timeNow - v < timeMax) requested.remove(k)
+            }
+            requested[id] = time
+            //
             val body = it.readBytes(it.readInt())
             val issuer = TLSIssuer.of(
                 method = method,
@@ -75,7 +90,7 @@ class RealTLSReceiver(
             it.toByteArray()
         }
         val random: SecureRandom = SecureRandom.getInstanceStrong() // todo
-        val iv = ByteArray(16)
+        val iv = ByteArray(TLSBytes.ivSize)
         random.nextBytes(iv)
         val encrypted = symmetric.enc.encrypt(issuer.key, payload, iv = iv)
         val signee = TLSBytes.toSignee(

@@ -6,6 +6,8 @@ import java.util.UUID
 import kotlin.time.Duration
 
 internal object TLSBytes {
+    const val ivSize = 16
+
     fun toPayload(
         id: UUID,
         time: Duration,
