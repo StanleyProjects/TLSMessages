@@ -29,7 +29,7 @@ dependencies {
 
 ## Unstable
 
-> GitHub [0.0.1u-SNAPSHOT](https://github.com/StanleyProjects/TLSMessages/releases/tag/0.0.1u-SNAPSHOT) release
+> GitHub [0.1.0u-SNAPSHOT](https://github.com/StanleyProjects/TLSMessages/releases/tag/0.1.0u-SNAPSHOT) release
 >
 > Maven [metadata](https://central.sonatype.com/repository/maven-snapshots/com/github/kepocnhh/TLSMessages/maven-metadata.xml)
 
@@ -45,7 +45,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.kepocnhh:TLSMessages:0.0.1u-SNAPSHOT")
+    implementation("com.github.kepocnhh:TLSMessages:0.1.0u-SNAPSHOT")
 }
 ```
 
