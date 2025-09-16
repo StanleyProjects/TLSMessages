@@ -27,7 +27,10 @@ val gh = GitHub.Repository(
     name = rootProject.name,
 )
 
-repositories.mavenCentral()
+repositories {
+    mavenCentral()
+    maven("https://central.sonatype.com/repository/maven-snapshots")
+}
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -53,7 +56,7 @@ tasks.getByName<KotlinCompile>("compileTestKotlin") {
 
 dependencies {
     implementation("com.github.kepocnhh:Bytes:0.4.0")
-    implementation("com.github.kepocnhh:Secrets:0.1.0")
+    implementation("com.github.kepocnhh:Secrets:0.2.0u-SNAPSHOT")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${Version.jupiter}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${Version.jupiter}")
 }

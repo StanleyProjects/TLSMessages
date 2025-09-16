@@ -27,7 +27,7 @@ class RealTLSTransmitter(
         val issuer = TLSIssuer.of(
             method = method,
             query = query,
-            key = symmetric.factory.newSecretKey(),
+            key = symmetric.keys.newSecretKey(),
             id = UUID.randomUUID(), // todo
         )
         val encryptedKey = asymmetric.enc.encrypt(keyPair.public, issuer.key.encoded)

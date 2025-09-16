@@ -30,7 +30,7 @@ class RealTLSReceiver(
         val (key, payload, signature) = ByteArrayInputStream(bytes).use {
             val encryptedKey = it.readBytes(it.readInt())
             val encodedKey = asymmetric.enc.decrypt(keyPair.private, encryptedKey)
-            val key = symmetric.factory.toSecretKey(encodedKey)
+            val key = symmetric.keys.toSecretKey(encodedKey)
             val encrypted = it.readBytes(it.readInt())
             val iv = it.readBytes(TLSBytes.ivSize)
             val signature = it.readBytes(it.readInt())
